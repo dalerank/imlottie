@@ -16,16 +16,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "imlottie_model.h"
+#include "imlottie_renderer.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/stream.h"
 
-#include "imlottie_renderer.h"
+#include "imlottie_rasterizer.h"
 
 #include <fstream>
-
-using namespace rapidjson;
 
 namespace imlottie {
 
@@ -73,8 +71,8 @@ public:
         v_.SetDouble(d);
         return true;
     }
-    bool RawNumber(const char *, SizeType, bool) { return false; }
-    bool String(const char *str, SizeType length, bool)
+    bool RawNumber(const char *, rapidjson::SizeType, bool) { return false; }
+    bool String(const char *str, rapidjson::SizeType length, bool)
     {
         st_ = kHasString;
         v_.SetString(str, length);
@@ -85,13 +83,13 @@ public:
         st_ = kEnteringObject;
         return true;
     }
-    bool Key(const char *str, SizeType length, bool)
+    bool Key(const char *str, rapidjson::SizeType length, bool)
     {
         st_ = kHasKey;
         v_.SetString(str, length);
         return true;
     }
-    bool EndObject(SizeType)
+    bool EndObject(rapidjson::SizeType)
     {
         st_ = kExitingObject;
         return true;
@@ -101,7 +99,7 @@ public:
         st_ = kEnteringArray;
         return true;
     }
-    bool EndArray(SizeType)
+    bool EndArray(rapidjson::SizeType)
     {
         st_ = kExitingArray;
         return true;
@@ -457,11 +455,11 @@ int LottieParserImpl::PeekType() const
     }
 
     if (st_ == kEnteringArray) {
-        return kArrayType;
+        return rapidjson::kArrayType;
     }
 
     if (st_ == kEnteringObject) {
-        return kObjectType;
+        return rapidjson::kObjectType;
     }
 
     return -1;
@@ -469,10 +467,10 @@ int LottieParserImpl::PeekType() const
 
 void LottieParserImpl::Skip(const char * /*key*/)
 {
-    if (PeekType() == kArrayType) {
+    if (PeekType() == rapidjson::kArrayType) {
         EnterArray();
         SkipArray();
-    } else if (PeekType() == kObjectType) {
+    } else if (PeekType() == rapidjson::kObjectType) {
         EnterObject();
         SkipObject();
     } else {
@@ -482,7 +480,7 @@ void LottieParserImpl::Skip(const char * /*key*/)
 
 LottieBlendMode LottieParserImpl::getBlendMode()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     LottieBlendMode mode = LottieBlendMode::Normal;
 
     switch (GetInt()) {
@@ -519,7 +517,7 @@ void LottieParserImpl::resolveLayerRefs()
 
 void LottieParserImpl::parseComposition()
 {
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     std::shared_ptr<LOTCompositionData> sharedComposition =
         std::make_shared<LOTCompositionData>();
@@ -527,22 +525,22 @@ void LottieParserImpl::parseComposition()
     compRef = comp;
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "v")) {
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             comp->mVersion = std::string(GetString());
         } else if (0 == strcmp(key, "w")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             comp->mSize.setWidth(GetInt());
         } else if (0 == strcmp(key, "h")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             comp->mSize.setHeight(GetInt());
         } else if (0 == strcmp(key, "ip")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             comp->mStartFrame = (long)GetDouble();
         } else if (0 == strcmp(key, "op")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             comp->mEndFrame = (long)GetDouble();
         } else if (0 == strcmp(key, "fr")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             comp->mFrameRate = (float)GetDouble();
         } else if (0 == strcmp(key, "assets")) {
             parseAssets(comp);
@@ -576,20 +574,20 @@ void LottieParserImpl::parseComposition()
 
 void LottieParserImpl::parseMarker()
 {
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     std::string comment;
     int         timeframe{0};
     int          duration{0};
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "cm")) {
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             comment = std::string(GetString());
         } else if (0 == strcmp(key, "tm")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             timeframe = (int)GetDouble();
         } else if (0 == strcmp(key, "dr")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             duration = (int)GetDouble();
 
         } else {
@@ -604,7 +602,7 @@ void LottieParserImpl::parseMarker()
 
 void LottieParserImpl::parseMarkers()
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         parseMarker();
@@ -614,7 +612,7 @@ void LottieParserImpl::parseMarkers()
 
 void LottieParserImpl::parseAssets(LOTCompositionData *composition)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         auto asset = parseAsset();
@@ -687,7 +685,7 @@ static std::string toString(const T &value) {
  */
 LOTAsset* LottieParserImpl::parseAsset()
 {
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
 
     auto                      asset = allocator().make<LOTAsset>();
     std::string               filename;
@@ -696,30 +694,30 @@ LOTAsset* LottieParserImpl::parseAsset()
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "w")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             asset->mWidth = GetInt();
         } else if (0 == strcmp(key, "h")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             asset->mHeight = GetInt();
         } else if (0 == strcmp(key, "p")) { /* image name */
             asset->mAssetType = LOTAsset::Type::Image;
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             filename = std::string(GetString());
         } else if (0 == strcmp(key, "u")) { /* relative image path */
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             relativePath = std::string(GetString());
         } else if (0 == strcmp(key, "e")) { /* relative image path */
             embededResource = GetInt();
         } else if (0 == strcmp(key, "id")) { /* reference id*/
-            if (PeekType() == kStringType) {
+            if (PeekType() == rapidjson::kStringType) {
                 asset->mRefId = std::string(GetString());
             } else {
-                RAPIDJSON_ASSERT(PeekType() == kNumberType);
+                RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
                 asset->mRefId = toString(GetInt()).c_str();
             }
         } else if (0 == strcmp(key, "layers")) {
             asset->mAssetType = LOTAsset::Type::Precomp;
-            RAPIDJSON_ASSERT(PeekType() == kArrayType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
             EnterArray();
             bool staticFlag = true;
             while (NextArrayValue()) {
@@ -758,7 +756,7 @@ void LottieParserImpl::parseLayers(LOTCompositionData *comp)
     comp->mRootLayer->mLayerType = LayerType::Precomp;
     comp->mRootLayer->setName("__");
     bool staticFlag = true;
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         auto layer = parseLayer();
@@ -797,7 +795,7 @@ LottieColor LottieParserImpl::toColor(const char *str)
 
 MatteType LottieParserImpl::getMatteType()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 1:
         return MatteType::Alpha;
@@ -819,7 +817,7 @@ MatteType LottieParserImpl::getMatteType()
 
 LayerType LottieParserImpl::getLayerType()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 0:
         return LayerType::Precomp;
@@ -851,7 +849,7 @@ LayerType LottieParserImpl::getLayerType()
  */
 LOTLayerData* LottieParserImpl::parseLayer()
 {
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     LOTLayerData *layer = allocator().make<LOTLayerData>();
     curLayerRef = layer;
     bool ddd = true;
@@ -860,43 +858,43 @@ LOTLayerData* LottieParserImpl::parseLayer()
         if (0 == strcmp(key, "ty")) { /* Type of layer*/
             layer->mLayerType = getLayerType();
         } else if (0 == strcmp(key, "nm")) { /*Layer name*/
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             layer->setName(GetString());
         } else if (0 == strcmp(key, "ind")) { /*Layer index in AE. Used for
                                                  parenting and expressions.*/
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mId = GetInt();
         } else if (0 == strcmp(key, "ddd")) { /*3d layer */
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             ddd = GetInt();
         } else if (0 ==
                    strcmp(key,
                           "parent")) { /*Layer Parent. Uses "ind" of parent.*/
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mParentId = GetInt();
         } else if (0 == strcmp(key, "refId")) { /*preComp Layer reference id*/
-            RAPIDJSON_ASSERT(PeekType() == kStringType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
             layer->extra()->mPreCompRefId = std::string(GetString());
             layer->mHasGradient = true;
             mLayersToUpdate.push_back(layer);
         } else if (0 == strcmp(key, "sr")) {  // "Layer Time Stretching"
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mTimeStreatch = (float)GetDouble();
         } else if (0 == strcmp(key, "tm")) {  // time remapping
             parseProperty(layer->extra()->mTimeRemap);
         } else if (0 == strcmp(key, "ip")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mInFrame = std::lround((float)GetDouble());
         } else if (0 == strcmp(key, "op")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mOutFrame = std::lround((float)GetDouble());
         } else if (0 == strcmp(key, "st")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             layer->mStartFrame = (int)GetDouble();
         } else if (0 == strcmp(key, "bm")) {
             layer->mBlendMode = getBlendMode();
         } else if (0 == strcmp(key, "ks")) {
-            RAPIDJSON_ASSERT(PeekType() == kObjectType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
             EnterObject();
             layer->mTransform = parseTransformObject(ddd);
         } else if (0 == strcmp(key, "shapes")) {
@@ -968,7 +966,7 @@ LOTLayerData* LottieParserImpl::parseLayer()
 
 void LottieParserImpl::parseMaskProperty(LOTLayerData *layer)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         layer->extra()->mMasks.push_back(parseMaskObject());
@@ -979,7 +977,7 @@ LOTMaskData* LottieParserImpl::parseMaskObject()
 {
     auto obj = allocator().make<LOTMaskData>();
 
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "inv")) {
@@ -1024,7 +1022,7 @@ LOTMaskData* LottieParserImpl::parseMaskObject()
 
 void LottieParserImpl::parseShapesAttr(LOTLayerData *layer)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
         parseObject(layer);
@@ -1033,7 +1031,7 @@ void LottieParserImpl::parseShapesAttr(LOTLayerData *layer)
 
 LOTData* LottieParserImpl::parseObjectTypeAttr()
 {
-    RAPIDJSON_ASSERT(PeekType() == kStringType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
     const char *type = GetString();
     if (0 == strcmp(type, "gr")) {
         return parseGroupObject();
@@ -1076,7 +1074,7 @@ LOTData* LottieParserImpl::parseObjectTypeAttr()
 
 void LottieParserImpl::parseObject(LOTGroupData *parent)
 {
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "ty")) {
@@ -1096,10 +1094,10 @@ LOTData* LottieParserImpl::parseGroupObject()
         if (0 == strcmp(key, "nm")) {
             group->setName(GetString());
         } else if (0 == strcmp(key, "it")) {
-            RAPIDJSON_ASSERT(PeekType() == kArrayType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
             EnterArray();
             while (NextArrayValue()) {
-                RAPIDJSON_ASSERT(PeekType() == kObjectType);
+                RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
                 parseObject(group);
             }
             if (group->mChildren.back()->type() == LOTData::Type::Transform) {
@@ -1255,7 +1253,7 @@ LOTPolystarData* LottieParserImpl::parsePolystarObject()
 
 LOTTrimData::TrimType LottieParserImpl::getTrimType()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 1:
         return LOTTrimData::TrimType::Simultaneously;
@@ -1479,7 +1477,7 @@ LOTFillData* LottieParserImpl::parseFillObject()
  */
 CapStyle LottieParserImpl::getLineCap()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 1:
         return CapStyle::Flat;
@@ -1495,7 +1493,7 @@ CapStyle LottieParserImpl::getLineCap()
 
 FillRule LottieParserImpl::getFillRule()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 1:
         return FillRule::Winding;
@@ -1514,7 +1512,7 @@ FillRule LottieParserImpl::getFillRule()
  */
 JoinStyle LottieParserImpl::getLineJoin()
 {
-    RAPIDJSON_ASSERT(PeekType() == kNumberType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
     switch (GetInt()) {
     case 1:
         return JoinStyle::Miter;
@@ -1551,7 +1549,7 @@ LOTStrokeData* LottieParserImpl::parseStrokeObject()
         } else if (0 == strcmp(key, "lj")) {
             obj->mJoinStyle = getLineJoin();
         } else if (0 == strcmp(key, "ml")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             obj->mMiterLimit = (float)GetDouble();
         } else if (0 == strcmp(key, "d")) {
             parseDashProperty(obj->mDash);
@@ -1572,7 +1570,7 @@ LOTStrokeData* LottieParserImpl::parseStrokeObject()
 void LottieParserImpl::parseGradientProperty(LOTGradient *obj, const char *key)
 {
     if (0 == strcmp(key, "t")) {
-        RAPIDJSON_ASSERT(PeekType() == kNumberType);
+        RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
         obj->mGradientType = GetInt();
     } else if (0 == strcmp(key, "o")) {
         parseProperty(obj->mOpacity);
@@ -1630,10 +1628,10 @@ LOTGFillData* LottieParserImpl::parseGFillObject()
 
 void LottieParserImpl::parseDashProperty(LOTDashProperty &dash)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
-        RAPIDJSON_ASSERT(PeekType() == kObjectType);
+        RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
         EnterObject();
         while (const char *key = NextObjectKey()) {
             if (0 == strcmp(key, "v")) {
@@ -1663,7 +1661,7 @@ LOTGStrokeData* LottieParserImpl::parseGStrokeObject()
         } else if (0 == strcmp(key, "lj")) {
             obj->mJoinStyle = getLineJoin();
         } else if (0 == strcmp(key, "ml")) {
-            RAPIDJSON_ASSERT(PeekType() == kNumberType);
+            RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
             obj->mMiterLimit = (float)GetDouble();
         } else if (0 == strcmp(key, "d")) {
             parseDashProperty(obj->mDash);
@@ -1679,10 +1677,10 @@ LOTGStrokeData* LottieParserImpl::parseGStrokeObject()
 
 void LottieParserImpl::getValue(std::vector<VPointF> &v)
 {
-    RAPIDJSON_ASSERT(PeekType() == kArrayType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
     EnterArray();
     while (NextArrayValue()) {
-        RAPIDJSON_ASSERT(PeekType() == kArrayType);
+        RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
         EnterArray();
         VPointF pt;
         getValue(pt);
@@ -1695,7 +1693,7 @@ void LottieParserImpl::getValue(VPointF &pt)
     float val[4] = {0.f};
     int   i = 0;
 
-    if (PeekType() == kArrayType) EnterArray();
+    if (PeekType() == rapidjson::kArrayType) EnterArray();
 
     while (NextArrayValue()) {
         const auto value = (float)GetDouble();
@@ -1709,14 +1707,14 @@ void LottieParserImpl::getValue(VPointF &pt)
 
 void LottieParserImpl::getValue(float &val)
 {
-    if (PeekType() == kArrayType) {
+    if (PeekType() == rapidjson::kArrayType) {
         EnterArray();
         if (NextArrayValue()) val = (float)GetDouble();
         // discard rest
         while (NextArrayValue()) {
             GetDouble();
         }
-    } else if (PeekType() == kNumberType) {
+    } else if (PeekType() == rapidjson::kNumberType) {
         val = (float)GetDouble();
     } else {
         RAPIDJSON_ASSERT(0);
@@ -1727,7 +1725,7 @@ void LottieParserImpl::getValue(LottieColor &color)
 {
     float val[4] = {0.f};
     int   i = 0;
-    if (PeekType() == kArrayType) EnterArray();
+    if (PeekType() == rapidjson::kArrayType) EnterArray();
 
     while (NextArrayValue()) {
         const auto value = (float)GetDouble();
@@ -1742,7 +1740,7 @@ void LottieParserImpl::getValue(LottieColor &color)
 
 void LottieParserImpl::getValue(LottieGradient &grad)
 {
-    if (PeekType() == kArrayType) EnterArray();
+    if (PeekType() == rapidjson::kArrayType) EnterArray();
 
     while (NextArrayValue()) {
         grad.mGradient.push_back((float)GetDouble());
@@ -1751,12 +1749,12 @@ void LottieParserImpl::getValue(LottieGradient &grad)
 
 void LottieParserImpl::getValue(int &val)
 {
-    if (PeekType() == kArrayType) {
+    if (PeekType() == rapidjson::kArrayType) {
         EnterArray();
         while (NextArrayValue()) {
             val = GetInt();
         }
-    } else if (PeekType() == kNumberType) {
+    } else if (PeekType() == rapidjson::kNumberType) {
         val = GetInt();
     } else {
         RAPIDJSON_ASSERT(0);
@@ -1775,10 +1773,10 @@ void LottieParserImpl::getValue(LottieShapeData &obj)
      * The shape object could be wrapped by a array
      * if its part of the keyframe object
      */
-    bool arrayWrapper = (PeekType() == kArrayType);
+    bool arrayWrapper = (PeekType() == rapidjson::kArrayType);
     if (arrayWrapper) EnterArray();
 
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "i")) {
@@ -1837,7 +1835,7 @@ void LottieParserImpl::getValue(LottieShapeData &obj)
 VPointF LottieParserImpl::parseInperpolatorPoint()
 {
     VPointF cp;
-    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "x")) {
@@ -1929,13 +1927,13 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
             getValue(keyframe.mValue.mEndValue);
             continue;
         } else if (0 == strcmp(key, "n")) {
-            if (PeekType() == kStringType) {
+            if (PeekType() == rapidjson::kStringType) {
                 parsed.interpolatorKey = GetString();
             } else {
-                RAPIDJSON_ASSERT(PeekType() == kArrayType);
+                RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
                 EnterArray();
                 while (NextArrayValue()) {
-                    RAPIDJSON_ASSERT(PeekType() == kStringType);
+                    RAPIDJSON_ASSERT(PeekType() == rapidjson::kStringType);
                     if (parsed.interpolatorKey.empty()) {
                         parsed.interpolatorKey = GetString();
                     } else {
@@ -1991,10 +1989,10 @@ void LottieParserImpl::parseShapeProperty(LOTAnimatable<LottieShapeData> &obj)
     EnterObject();
     while (const char *key = NextObjectKey()) {
         if (0 == strcmp(key, "k")) {
-            if (PeekType() == kArrayType) {
+            if (PeekType() == rapidjson::kArrayType) {
                 EnterArray();
                 while (NextArrayValue()) {
-                    RAPIDJSON_ASSERT(PeekType() == kObjectType);
+                    RAPIDJSON_ASSERT(PeekType() == rapidjson::kObjectType);
                     parseKeyFrame(obj.animation());
                 }
             } else {
@@ -2017,7 +2015,7 @@ void LottieParserImpl::parseShapeProperty(LOTAnimatable<LottieShapeData> &obj)
 template <typename T>
 void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
 {
-    if (PeekType() == kNumberType) {
+    if (PeekType() == rapidjson::kNumberType) {
         if (!obj.isStatic()) {
             RAPIDJSON_ASSERT(false);
             st_ = kError;
@@ -2026,11 +2024,11 @@ void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
         /*single value property with no animation*/
         getValue(obj.value());
     } else {
-        RAPIDJSON_ASSERT(PeekType() == kArrayType);
+        RAPIDJSON_ASSERT(PeekType() == rapidjson::kArrayType);
         EnterArray();
         while (NextArrayValue()) {
             /* property with keyframe info*/
-            if (PeekType() == kObjectType) {
+            if (PeekType() == rapidjson::kObjectType) {
                 parseKeyFrame(obj.animation());
             } else {
                 /* Read before modifying.
@@ -2039,7 +2037,7 @@ void LottieParserImpl::parsePropertyHelper(LOTAnimatable<T> &obj)
                  * or array of object without entering the array
                  * thats why this hack is there
                  */
-                RAPIDJSON_ASSERT(PeekType() == kNumberType);
+                RAPIDJSON_ASSERT(PeekType() == rapidjson::kNumberType);
                 if (!obj.isStatic()) {
                     RAPIDJSON_ASSERT(false);
                     st_ = kError;
