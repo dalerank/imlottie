@@ -17,8 +17,12 @@
  */
 
 #include "imlottie_renderer.h"
+
 #include "freetype/v_ft_raster.h"
 #include "freetype/v_ft_stroker.h"
+
+#include "rapidjson/document.h"
+#include "rapidjson/rapidjson.h"
 
 #define STBI_ONLY_JPEG
 #define STBI_ONLY_PNG
@@ -3232,5 +3236,46 @@ void Surface::setDrawRegion(size_t x, size_t y, size_t width, size_t height)
     mDrawArea.w = width;
     mDrawArea.h = height;
 }
+
+RjValue::RjValue()
+{
+    v_ = new rapidjson::Value();
+}
+
+static rapidjson::Value& vcast(void* p) { return *(rapidjson::Value*)p; }
+void RjValue::SetNull() { vcast(v_).SetNull(); }
+void RjValue::SetBool(bool b) { vcast(v_).SetBool(b); }
+void RjValue::SetInt(int i) { vcast(v_).SetInt(i); }
+void RjValue::SetInt64(int64_t i) { vcast(v_).SetInt64(i); }
+void RjValue::SetUint64(uint64_t i) { vcast(v_).SetUint64(i); }
+void RjValue::SetUint(unsigned int i) { vcast(v_).SetUint(i); }
+void RjValue::SetDouble(double i) { vcast(v_).SetDouble(i); }
+void RjValue::SetString(const char* str,size_t length) { vcast(v_).SetString(str, static_cast<rapidjson::SizeType>(length)); }
+
+RjValue::~RjValue()
+{
+    rapidjson::Value* d = (rapidjson::Value*)v_;
+    delete d;
+}
+
+const char* RjValue::GetString() const { return vcast(v_).GetString(); }
+int RjValue::GetInt() const { return vcast(v_).GetInt(); }
+bool RjValue::GetBool() const { return vcast(v_).GetBool(); }
+double RjValue::GetDouble() const { return vcast(v_).GetDouble(); }
+
+int  RjValue::GetType()  const { return vcast(v_).GetType(); }
+bool RjValue::IsNull()   const { return vcast(v_).IsNull(); }
+bool RjValue::IsFalse()  const { return vcast(v_).IsFalse(); }
+bool RjValue::IsTrue()   const { return vcast(v_).IsTrue(); }
+bool RjValue::IsBool()   const { return vcast(v_).IsBool(); }
+bool RjValue::IsObject() const { return vcast(v_).IsObject(); }
+bool RjValue::IsArray()  const { return vcast(v_).IsArray(); }
+bool RjValue::IsNumber() const { return vcast(v_).IsNumber(); }
+bool RjValue::IsInt()    const { return vcast(v_).IsInt(); }
+bool RjValue::IsUint()   const { return vcast(v_).IsUint(); }
+bool RjValue::IsInt64()  const { return vcast(v_).IsInt64(); }
+bool RjValue::IsUint64() const { return vcast(v_).IsUint64(); }
+bool RjValue::IsDouble() const { return vcast(v_).IsDouble(); }
+bool RjValue::IsString() const { return vcast(v_).IsString(); }
 
 } // imlottie
