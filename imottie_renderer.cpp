@@ -3212,4 +3212,25 @@ void VBezier::split(VBezier *firstHalf, VBezier *secondHalf) const
     firstHalf->y4 = secondHalf->y1 = (firstHalf->y3 + secondHalf->y2) * 0.5f;
 }
 
+Surface::Surface(uint32_t *buffer, size_t width, size_t height,
+                 size_t bytesPerLine)
+    : mBuffer(buffer),
+    mWidth(width),
+    mHeight(height),
+    mBytesPerLine(bytesPerLine)
+{
+    mDrawArea.w = mWidth;
+    mDrawArea.h = mHeight;
+}
+
+void Surface::setDrawRegion(size_t x, size_t y, size_t width, size_t height)
+{
+    if ((x + width > mWidth) || (y + height > mHeight)) return;
+
+    mDrawArea.x = x;
+    mDrawArea.y = y;
+    mDrawArea.w = width;
+    mDrawArea.h = height;
+}
+
 } // imlottie

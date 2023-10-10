@@ -25,6 +25,8 @@
 #include "stl_config.h"
 #endif
 
+#include "imlottie_common.h"
+
 using uint = uint32_t;
 using ushort = uint16_t;
 using uchar = uint8_t;
@@ -104,14 +106,7 @@ public:
     constexpr inline operator uint() const noexcept { return uint(i); }
 };
 
-struct VDebug {
-    template<typename Args>
-    VDebug &operator<<(const Args &) { return *this; }
-};
 
-#define vDebug VDebug()
-#define vWarning VDebug()
-#define vCritical VDebug()
 
 template <typename Enum>
 class vFlag {

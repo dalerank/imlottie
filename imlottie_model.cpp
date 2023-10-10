@@ -21,6 +21,8 @@
 #include "rapidjson/document.h"
 #include "rapidjson/stream.h"
 
+#include "imlottie_renderer.h"
+
 #include <fstream>
 
 using namespace rapidjson;
@@ -1930,8 +1932,7 @@ bool LottieParserImpl::parseKeyFrameValue(const char *               key,
     return true;
 }
 
-VInterpolator* LottieParserImpl::interpolator(
-    VPointF inTangent, VPointF outTangent, const char* key)
+VInterpolator* LottieParserImpl::interpolator(VPointF inTangent, VPointF outTangent, const char* key)
 {
     if (strlen(key) == 0) {
         std::vector<char> temp(20);
@@ -2022,8 +2023,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         obj.mKeyFrames.back().mEndFrame = keyframe.mStartFrame;
         // if no end value provided, copy start value to previous frame
         if (parsed.value && parsed.noEndValue) {
-            obj.mKeyFrames.back().mValue.mEndValue =
-                keyframe.mValue.mStartValue;
+            obj.mKeyFrames.back().mValue.mEndValue = keyframe.mValue.mStartValue;
         }
     }
 
@@ -2032,8 +2032,7 @@ void LottieParserImpl::parseKeyFrame(LOTAnimInfo<T> &obj)
         keyframe.mEndFrame = keyframe.mStartFrame;
         obj.mKeyFrames.push_back(std::move(keyframe));
     } else if (parsed.interpolator) {
-        keyframe.mInterpolator = interpolator(
-            inTangent, outTangent, parsed.interpolatorKey.c_str());
+        keyframe.mInterpolator = interpolator(inTangent, outTangent, parsed.interpolatorKey.size() > 0 ? parsed.interpolatorKey.c_str() : "unk");
         obj.mKeyFrames.push_back(std::move(keyframe));
     } else {
         // its the last frame discard.
@@ -4882,27 +4881,6 @@ void Animation::setValue(Point_Type, Property prop, const std::string &keypath,
 
 Animation::~Animation() = default;
 Animation::Animation() : d(std::make_unique<AnimationImpl>()) {}
-
-Surface::Surface(uint32_t *buffer, size_t width, size_t height,
-                 size_t bytesPerLine)
-    : mBuffer(buffer),
-      mWidth(width),
-      mHeight(height),
-      mBytesPerLine(bytesPerLine)
-{
-    mDrawArea.w = mWidth;
-    mDrawArea.h = mHeight;
-}
-
-void Surface::setDrawRegion(size_t x, size_t y, size_t width, size_t height)
-{
-    if ((x + width > mWidth) || (y + height > mHeight)) return;
-
-    mDrawArea.x = x;
-    mDrawArea.y = y;
-    mDrawArea.w = width;
-    mDrawArea.h = height;
-}
 
 } // namespace imlottie
 
