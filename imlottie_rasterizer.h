@@ -27,34 +27,7 @@
 
 #include "imlottie_common.h"
 
-using uint = uint32_t;
-using ushort = uint16_t;
-using uchar = uint8_t;
 
-#ifndef __has_attribute
-# define __has_attribute(x) 0
-#endif /* !__has_attribute */
-
-#if __has_attribute(unused)
-# define V_UNUSED __attribute__((__unused__))
-#else
-# define V_UNUSED
-#endif /* V_UNUSED */
-
-#if __has_attribute(warn_unused_result)
-# define V_REQUIRED_RESULT __attribute__((__warn_unused_result__))
-#else
-# define V_REQUIRED_RESULT
-#endif /* V_REQUIRED_RESULT */
-
-#define V_CONSTEXPR constexpr
-#define V_NOTHROW noexcept
-
-#if __GNUC__ >= 7
-#define VECTOR_FALLTHROUGH __attribute__ ((fallthrough));
-#else
-#define VECTOR_FALLTHROUGH
-#endif
 
 #ifdef __cplusplus
 extern "C" {
