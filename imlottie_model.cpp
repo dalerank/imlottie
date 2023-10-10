@@ -29,25 +29,6 @@ using namespace rapidjson;
 
 namespace imlottie {
 
-RjInsituStringStream::RjInsituStringStream(char* str)
-{
-  ss_ = new InsituStringStream(str);
-}
-
-RjReader::RjReader() { r_ = new Reader(); }
-
-static Reader& rcast(void* p) { return *(Reader*)p; }
-void RjReader::IterativeParseInit() { rcast(r_).IterativeParseInit(); }
-bool RjReader::HasParseError() const { return rcast(r_).HasParseError(); }
-
-bool RjReader::IterativeParseNext(int parseFlags, RjInsituStringStream& ss_, LookaheadParserHandlerBase& handler)
-{
-  if (parseFlags == (kParseDefaultFlags | kParseInsituFlag))
-    return rcast(r_).IterativeParseNext<kParseDefaultFlags|kParseInsituFlag>(*(InsituStringStream*)(ss_.ss_), handler);
-  else 
-    return false;
-}
-
 class LookaheadParserHandler : public LookaheadParserHandlerBase {
 public:
     bool Null()

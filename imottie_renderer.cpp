@@ -22,7 +22,7 @@
 #include "freetype/v_ft_stroker.h"
 
 #include "rapidjson/document.h"
-#include "rapidjson/rapidjson.h"
+#include "rapidjson/stream.h"
 
 #define STBI_ONLY_JPEG
 #define STBI_ONLY_PNG
@@ -3277,5 +3277,25 @@ bool RjValue::IsInt64()  const { return vcast(v_).IsInt64(); }
 bool RjValue::IsUint64() const { return vcast(v_).IsUint64(); }
 bool RjValue::IsDouble() const { return vcast(v_).IsDouble(); }
 bool RjValue::IsString() const { return vcast(v_).IsString(); }
+
+RjInsituStringStream::RjInsituStringStream(char* str)
+{
+    ss_ = new rapidjson::InsituStringStream(str);
+}
+
+RjReader::RjReader() { r_ = new rapidjson::Reader(); }
+
+static rapidjson::Reader& rcast(void* p) { return *(rapidjson::Reader*)p; }
+void RjReader::IterativeParseInit() { rcast(r_).IterativeParseInit(); }
+bool RjReader::HasParseError() const { return rcast(r_).HasParseError(); }
+
+bool RjReader::IterativeParseNext(int parseFlags, RjInsituStringStream& ss_, LookaheadParserHandlerBase& handler)
+{
+    if (parseFlags == (rapidjson::kParseDefaultFlags | rapidjson::kParseInsituFlag))
+        return rcast(r_).IterativeParseNext<rapidjson::kParseDefaultFlags|rapidjson::kParseInsituFlag>(*(rapidjson::InsituStringStream*)(ss_.ss_), handler);
+    else 
+        return false;
+}
+
 
 } // imlottie

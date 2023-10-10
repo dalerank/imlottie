@@ -48,4 +48,40 @@ struct RjValue
     void* v_ = nullptr;
 };
 
+struct RjInsituStringStream
+{
+    RjInsituStringStream(char* str);
+    void* ss_ = nullptr;
+};
+
+struct LookaheadParserHandlerBase
+{
+    virtual bool Null() = 0;
+    virtual bool Bool(bool b) = 0;
+    virtual bool Int(int i) = 0;
+    virtual bool Uint(unsigned u) = 0;
+    virtual bool Int64(int64_t i) = 0;
+    virtual bool Uint64(int64_t u) = 0;
+    virtual bool Double(double d) = 0;
+    virtual bool RawNumber(const char *, unsigned length, bool) = 0;
+    virtual bool String(const char *str, unsigned length, bool) = 0;
+    virtual bool StartObject() = 0;
+    virtual bool Key(const char *str, unsigned length, bool) = 0;
+    virtual bool EndObject(unsigned) = 0;
+    virtual bool StartArray() = 0;
+    virtual bool EndArray(unsigned) = 0;
+};
+
+struct RjReader
+{
+    RjReader();
+
+    void IterativeParseInit();
+    bool HasParseError() const;
+    bool IterativeParseNext(int parseFlags, RjInsituStringStream& ss_, LookaheadParserHandlerBase& handler);
+
+    void* r_ = nullptr;
+};
+
+
 }
