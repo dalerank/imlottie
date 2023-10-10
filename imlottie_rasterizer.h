@@ -27,8 +27,6 @@
 
 #include "imlottie_common.h"
 
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -79,7 +77,95 @@ public:
     constexpr inline operator uint() const noexcept { return uint(i); }
 };
 
+struct Color {
+    Color() = default;
+    Color(float r, float g , float b):_r(r), _g(g), _b(b){}
+    float r() const {return _r;}
+    float g() const {return _g;}
+    float b() const {return _b;}
+private:
+    float _r{0};
+    float _g{0};
+    float _b{0};
+};
 
+struct Size {
+    Size() = default;
+    Size(float w, float h):_w(w), _h(h){}
+    float w() const {return _w;}
+    float h() const {return _h;}
+private:
+    float _w{0};
+    float _h{0};
+};
+
+struct Point {
+    Point() = default;
+    Point(float x, float y):_x(x), _y(y){}
+    float x() const {return _x;}
+    float y() const {return _y;}
+private:
+    float _x{0};
+    float _y{0};
+};
+
+enum LOTMaskType: unsigned char
+{
+    MaskAdd = 0,
+    MaskSubstract,
+    MaskIntersect,
+    MaskDifference
+};
+
+enum LOTMatteType: uchar
+{
+    MatteNone = 0,
+    MatteAlpha,
+    MatteAlphaInv,
+    MatteLuma,
+    MatteLumaInv
+};
+
+struct LOTMask {
+    struct {
+        const float *ptPtr;
+        size_t       ptCount;
+        const char*  elmPtr;
+        size_t       elmCount;
+    } mPath;
+    LOTMaskType mMode;
+    unsigned char mAlpha;
+};
+struct LOTNode;
+struct LOTLayerNode {
+    struct {
+        LOTMask        *ptr;
+        size_t          size;
+    } mMaskList;
+
+    struct {
+        const float *ptPtr;
+        size_t       ptCount;
+        const char  *elmPtr;
+        size_t       elmCount;
+    } mClipPath;
+
+    struct {
+        struct LOTLayerNode   **ptr;
+        size_t                  size;
+    } mLayerList;
+
+    struct {
+        LOTNode        **ptr;
+        size_t           size;
+    } mNodeList;
+
+    LOTMatteType mMatte;
+    int          mVisible;
+    unsigned char mAlpha;
+    const char  *keypath;
+
+};
 
 template <typename Enum>
 class vFlag {
@@ -2518,6 +2604,99 @@ enum class LayerType: uchar
     Text = 5
 };
 
+class LOTCompositionData;
+class LOTLayerData;
+class LOTTransformData;
+class LOTShapeGroupData;
+class LOTShapeData;
+class LOTRectData;
+class LOTEllipseData;
+class LOTTrimData;
+class LOTRepeaterData;
+class LOTFillData;
+class LOTStrokeData;
+class LOTGroupData;
+class LOTGFillData;
+class LOTGStrokeData;
+class LottieShapeData;
+class LOTPolystarData;
+class LOTMaskData;
+
+struct LOTModelStat
+{
+    uint16_t precompLayerCount{0};
+    uint16_t solidLayerCount{0};
+    uint16_t shapeLayerCount{0};
+    uint16_t imageLayerCount{0};
+    uint16_t nullLayerCount{0};
+
+};
+
+template <typename T>
+struct LOTKeyFrameValue {
+    T mStartValue;
+    T mEndValue;
+    T value(float t) const { return lerp(mStartValue, mEndValue, t); }
+    float angle(float ) const { return 0;}
+};
+
+class LottieColor
+{
+public:
+    LottieColor() = default;
+    LottieColor(float red, float green , float blue):r(red), g(green),b(blue){}
+    VColor toColor(float a=1){ return VColor(uchar(255 * r),
+                                             uchar(255 * g),
+                                             uchar(255 * b),
+                                             uchar(255 * a));}
+    friend inline LottieColor operator+(const LottieColor &c1, const LottieColor &c2);
+    friend inline LottieColor operator-(const LottieColor &c1, const LottieColor &c2);
+public:
+    float r{1};
+    float g{1};
+    float b{1};
+};
+
+class LOTKeyPath{
+public:
+    LOTKeyPath(const std::string &keyPath);
+    bool matches(const std::string &key, uint depth);
+    uint nextDepth(const std::string key, uint depth);
+    bool fullyResolvesTo(const std::string key, uint depth);
+
+    bool propagate(const std::string key, uint depth) {
+        return skip(key) ? true : (depth < size()) || (mKeys[depth] == "**");
+    }
+    bool skip(const std::string &key) const { return key == "__";}
+private:
+    bool isGlobstar(uint depth) const {return mKeys[depth] == "**";}
+    bool isGlob(uint depth) const {return mKeys[depth] == "*";}
+    bool endsWithGlobstar() const { return mKeys.back() == "**"; }
+    size_t size() const {return mKeys.size() - 1;}
+private:
+    std::vector<std::string> mKeys;
+};
+
+enum class Property {
+    FillColor,     /*!< Color property of Fill object , value type is imlottie::Color */
+    FillOpacity,   /*!< Opacity property of Fill object , value type is float [ 0 .. 100] */
+    StrokeColor,   /*!< Color property of Stroke object , value type is imlottie::Color */
+    StrokeOpacity, /*!< Opacity property of Stroke object , value type is float [ 0 .. 100] */
+    StrokeWidth,   /*!< stroke with property of Stroke object , value type is float */
+    TrAnchor,      /*!< Transform Anchor property of Layer and Group object , value type is imlottie::Point */
+    TrPosition,    /*!< Transform Position property of Layer and Group object , value type is imlottie::Point */
+    TrScale,       /*!< Transform Scale property of Layer and Group object , value type is imlottie::Size. range[0 ..100] */
+    TrRotation,    /*!< Transform Scale property of Layer and Group object , value type is float. range[0 .. 360] in degrees*/
+    TrOpacity      /*!< Transform Opacity property of Layer and Group object , value type is float [ 0 .. 100] */
+};
+
+struct FrameInfo {
+    explicit FrameInfo(uint32_t frame): _frameNo(frame){}
+    uint32_t curFrame() const {return _frameNo;}
+private:
+    uint32_t _frameNo;
+};
+
 // Naive way to implement std::variant
 // refactor it when we move to c++17
 // users should make sure proper combination
@@ -2525,10 +2704,10 @@ enum class LayerType: uchar
 class LOTVariant
 {
 public:
-    using ValueFunc = std::function<float(const imlottie::FrameInfo &)>;
-    using ColorFunc = std::function<imlottie::Color(const imlottie::FrameInfo &)>;
-    using PointFunc = std::function<imlottie::Point(const imlottie::FrameInfo &)>;
-    using SizeFunc = std::function<imlottie::Size(const imlottie::FrameInfo &)>;
+    using ValueFunc = std::function<float(const FrameInfo &)>;
+    using ColorFunc = std::function<Color(const imlottie::FrameInfo &)>;
+    using PointFunc = std::function<Point(const imlottie::FrameInfo &)>;
+    using SizeFunc = std::function<Size(const imlottie::FrameInfo &)>;
 
     LOTVariant(imlottie::Property prop, const ValueFunc &v):mPropery(prop), mTag(Value)
     {
@@ -2698,80 +2877,6 @@ private:
     }impl;
 };
 
-class LOTCompositionData;
-class LOTLayerData;
-class LOTTransformData;
-class LOTShapeGroupData;
-class LOTShapeData;
-class LOTRectData;
-class LOTEllipseData;
-class LOTTrimData;
-class LOTRepeaterData;
-class LOTFillData;
-class LOTStrokeData;
-class LOTGroupData;
-class LOTGFillData;
-class LOTGStrokeData;
-class LottieShapeData;
-class LOTPolystarData;
-class LOTMaskData;
-
-struct LOTModelStat
-{
-    uint16_t precompLayerCount{0};
-    uint16_t solidLayerCount{0};
-    uint16_t shapeLayerCount{0};
-    uint16_t imageLayerCount{0};
-    uint16_t nullLayerCount{0};
-
-};
-
-template <typename T>
-struct LOTKeyFrameValue {
-    T mStartValue;
-    T mEndValue;
-    T value(float t) const { return lerp(mStartValue, mEndValue, t); }
-    float angle(float ) const { return 0;}
-};
-
-class LottieColor
-{
-public:
-    LottieColor() = default;
-    LottieColor(float red, float green , float blue):r(red), g(green),b(blue){}
-    VColor toColor(float a=1){ return VColor(uchar(255 * r),
-                                             uchar(255 * g),
-                                             uchar(255 * b),
-                                             uchar(255 * a));}
-    friend inline LottieColor operator+(const LottieColor &c1, const LottieColor &c2);
-    friend inline LottieColor operator-(const LottieColor &c1, const LottieColor &c2);
-public:
-    float r{1};
-    float g{1};
-    float b{1};
-};
-
-class LOTKeyPath{
-public:
-    LOTKeyPath(const std::string &keyPath);
-    bool matches(const std::string &key, uint depth);
-    uint nextDepth(const std::string key, uint depth);
-    bool fullyResolvesTo(const std::string key, uint depth);
-
-    bool propagate(const std::string key, uint depth) {
-        return skip(key) ? true : (depth < size()) || (mKeys[depth] == "**");
-    }
-    bool skip(const std::string &key) const { return key == "__";}
-private:
-    bool isGlobstar(uint depth) const {return mKeys[depth] == "**";}
-    bool isGlob(uint depth) const {return mKeys[depth] == "*";}
-    bool endsWithGlobstar() const { return mKeys.back() == "**"; }
-    size_t size() const {return mKeys.size() - 1;}
-private:
-    std::vector<std::string> mKeys;
-};
-
-
 class LOTFilter
 {
 public:
@@ -2834,7 +2939,7 @@ public:
         return data(prop).value()(info);
     }
 private:
-    const LOTVariant& data(imlottie::Property prop) const
+    const LOTVariant& data(Property prop) const
     {
         auto result = std::find_if(mFilters.begin(),
                                    mFilters.end(),
@@ -3957,6 +4062,9 @@ enum class DirtyFlagBit : uchar
 class LOTLayerItem;
 class LOTMaskItem;
 class VDrawable;
+struct LOTNode;
+struct LOTLayerNode;
+class Surface;
 
 class LOTDrawable : public VDrawable
 {
@@ -3965,10 +4073,7 @@ public:
 public:
     std::unique_ptr<LOTNode>  mCNode{nullptr};
 
-    ~LOTDrawable() {
-        if (mCNode && mCNode->mGradient.stopPtr)
-            free(mCNode->mGradient.stopPtr);
-    }
+    ~LOTDrawable();
 };
 
 class LOTCompItem
@@ -3979,7 +4084,7 @@ public:
     VSize size() const { return mViewSize;}
     void buildRenderTree();
     const LOTLayerNode * renderTree()const;
-    bool render(const imlottie::Surface &surface);
+    bool render(const Surface &surface);
     void setValue(const std::string &keypath, LOTVariant &value);
 private:
     VBitmap                                     mSurface;
@@ -4010,7 +4115,7 @@ public:
 };
 
 typedef vFlag<DirtyFlagBit> DirtyFlag;
-
+struct LOTNode;
 struct LOTCApiData
 {
     LOTCApiData();
@@ -4051,7 +4156,7 @@ private:
 };
 
 using DrawableList = VSpan<VDrawable *>;
-
+struct LOTLayerNode;
 class LOTLayerItem
 {
 public:
@@ -4459,6 +4564,385 @@ private:
     bool                         mHidden{false};
     int                          mCopies{0};
 };
+
+enum LOTBrushType: uchar
+{
+    BrushSolid = 0,
+    BrushGradient
+};
+
+enum LOTFillRule: uchar
+{
+    FillEvenOdd = 0,
+    FillWinding
+};
+
+typedef enum
+{
+    JoinMiter = 0,
+    JoinBevel,
+    JoinRound
+} LOTJoinStyle;
+
+enum LOTCapStyle: uchar
+{
+    CapFlat = 0,
+    CapSquare,
+    CapRound
+} ;
+
+enum LOTGradientType: uchar
+{
+    GradientLinear = 0,
+    GradientRadial
+};
+
+struct LOTGradientStop
+{
+    float         pos;
+    unsigned char r, g, b, a;
+};
+
+struct LOTMarker {
+    char *name;
+    size_t startframe;
+    size_t endframe;
+};
+
+struct LOTMarkerList {
+    LOTMarker *ptr;
+    size_t size;
+};
+
+typedef struct LOTNode {
+
+#define ChangeFlagNone 0x0000
+#define ChangeFlagPath 0x0001
+#define ChangeFlagPaint 0x0010
+#define ChangeFlagAll (ChangeFlagPath & ChangeFlagPaint)
+
+    struct {
+        const float *ptPtr;
+        size_t       ptCount;
+        const char  *elmPtr;
+        size_t       elmCount;
+    } mPath;
+
+    struct {
+        unsigned char r, g, b, a;
+    } mColor;
+
+    struct {
+        unsigned char  enable;
+        float       width;
+        LOTCapStyle  cap;
+        LOTJoinStyle join;
+        float       miterLimit;
+        float    *dashArray;
+        int       dashArraySize;
+    } mStroke;
+
+    struct {
+        LOTGradientType  type;
+        LOTGradientStop *stopPtr;
+        size_t           stopCount;
+        struct {
+            float x, y;
+        } start, end, center, focal;
+        float cradius;
+        float fradius;
+    } mGradient;
+
+    struct {
+        unsigned char *data;
+        size_t width;
+        size_t height;
+        unsigned char mAlpha;
+        struct {
+            float m11; float m12; float m13;
+            float m21; float m22; float m23;
+            float m31; float m32; float m33;
+        } mMatrix;
+    } mImageInfo;
+
+    int       mFlag;
+    LOTBrushType mBrushType;
+    LOTFillRule  mFillRule;
+
+    const char  *keypath;
+} LOTNode;
+
+class AnimationImpl;
+struct LOTNode;
+struct LOTLayerNode;
+
+struct Color_Type{};
+struct Point_Type{};
+struct Size_Type{};
+struct Float_Type{};
+template <typename T> struct MapType;
+
+class Surface {
+public:
+    /**
+    *  @brief Surface object constructor.
+    *  @param[in] buffer surface buffer.
+    *  @param[in] width  surface width.
+    *  @param[in] height  surface height.
+    *  @param[in] bytesPerLine  number of bytes in a surface scanline.
+    *  @note Default surface format is ARGB32_Premultiplied.
+    */
+    Surface(uint32_t *buffer, size_t width, size_t height, size_t bytesPerLine);
+
+    /**
+    *  @brief Sets the Draw Area available on the Surface.
+    *  Lottie will use the draw region size to generate frame image
+    *  and will update only the draw rgion of the surface.
+    *  @param[in] x      region area x position.
+    *  @param[in] y      region area y position.
+    *  @param[in] width  region area width.
+    *  @param[in] height region area height.
+    *  @note Default surface format is ARGB32_Premultiplied.
+    *  @note Default draw region area is [ 0 , 0, surface width , surface height]
+    */
+    void setDrawRegion(size_t x, size_t y, size_t width, size_t height);
+
+    /**
+    *  @brief Returns width of the surface.
+    *  @return surface width
+    */
+    size_t width() const {return mWidth;}
+
+    /**
+    *  @brief Returns height of the surface.
+    *  @return surface height
+    */
+    size_t height() const {return mHeight;}
+
+    /**
+    *  @brief Returns number of bytes in the surface scanline.
+    *  @return number of bytes in scanline.
+    */
+    size_t  bytesPerLine() const {return mBytesPerLine;}
+
+    /**
+    *  @brief Returns buffer attached tp the surface.
+    *  @return buffer attaced to the Surface.
+    */
+    uint32_t *buffer() const {return mBuffer;}
+
+    /**
+    *  @brief Returns drawable area width of the surface.
+    *  @return drawable area width
+    *  @note Default value is width() of the surface
+    */
+    size_t drawRegionWidth() const {return mDrawArea.w;}
+
+    /**
+    *  @brief Returns drawable area height of the surface.
+    *  @return drawable area height
+    *  @note Default value is height() of the surface
+    */
+    size_t drawRegionHeight() const {return mDrawArea.h;}
+
+    /**
+    *  @brief Returns drawable area's x position of the surface.
+    *  @return drawable area's x potition.
+    *  @note Default value is 0
+    */
+    size_t drawRegionPosX() const {return mDrawArea.x;}
+
+    /**
+    *  @brief Returns drawable area's y position of the surface.
+    *  @return drawable area's y potition.
+    *  @note Default value is 0
+    */
+    size_t drawRegionPosY() const {return mDrawArea.y;}
+
+    bool isNeedClear() const { return mNeedClear; }
+    void setNeedClear(bool needClear) { mNeedClear = needClear; }
+
+    Surface() = default;
+private:
+    uint32_t    *mBuffer{nullptr};
+    size_t       mWidth{0};
+    size_t       mHeight{0};
+    size_t       mBytesPerLine{0};
+    struct {
+        size_t   x{0};
+        size_t   y{0};
+        size_t   w{0};
+        size_t   h{0};
+    }mDrawArea;
+    bool mNeedClear{true};
+};
+
+using MarkerList = std::vector<std::tuple<std::string, int , int>>;
+/**
+*  @brief https://helpx.adobe.com/after-effects/using/layer-markers-composition-markers.html
+*  Markers exported form AE are used to describe a segmnet of an animation {comment/tag , startFrame, endFrame}
+*  Marker can be use to devide a resource in to separate animations by tagging the segment with comment string ,
+*  start frame and duration of that segment.
+*/
+
+using LayerInfoList = std::vector<std::tuple<std::string, int , int>>;
+
+class Animation {
+public:
+
+    /**
+    *  @brief Constructs an animation object from file path.
+    *
+    *  @param[in] path Lottie resource file path
+    *  @param[in] cachePolicy whether to cache or not the model data.
+    *             use only when need to explicit disabl caching for a
+    *             particular resource. To disable caching at library level
+    *             use @see configureModelCacheSize() instead.
+    *
+    *  @return Animation object that can render the contents of the
+    *          Lottie resource represented by file path.
+    *
+    *  @internal
+    */
+    static std::shared_ptr<Animation> loadFromFile(const std::string &path, bool cachePolicy=true);
+
+    /**
+    *  @brief Constructs an animation object from JSON string data.
+    *
+    *  @param[in] jsonData The JSON string data.
+    *  @param[in] key the string that will be used to cache the JSON string data.
+    *  @param[in] resourcePath the path will be used to search for external resource.
+    *  @param[in] cachePolicy whether to cache or not the model data.
+    *             use only when need to explicit disabl caching for a
+    *             particular resource. To disable caching at library level
+    *             use @see configureModelCacheSize() instead.
+    *
+    *  @return Animation object that can render the contents of the
+    *          Lottie resource represented by JSON string data.
+    *
+    *  @internal
+    */
+    static std::shared_ptr<Animation> loadFromData(std::string jsonData, const std::string &key, const std::string &resourcePath="", bool cachePolicy=true);
+
+    /**
+    *  @brief Returns default framerate of the Lottie resource.
+    *  @return framerate of the Lottie resource
+    */
+    double frameRate() const;
+
+    /**
+    *  @brief Returns total number of frames present in the Lottie resource.
+    *  @return frame count of the Lottie resource.
+    *  @note frame number starts with 0.
+    *  @internal
+    */
+    size_t totalFrame() const;
+
+    /**
+    *  @brief Returns default viewport size of the Lottie resource.
+    *  @param[out] width  default width of the viewport.
+    *  @param[out] height default height of the viewport.
+    */
+    void   size(size_t &width, size_t &height) const;
+
+    /**
+    *  @brief Returns total animation duration of Lottie resource in second.
+    *         it uses totalFrame() and frameRate() to calculate the duration.
+    *         duration = totalFrame() / frameRate().
+    *  @return total animation duration in second.
+    *  @retval 0 if the Lottie resource has no animation.
+    *  @see totalFrame()
+    *  @see frameRate()
+    */
+    double duration() const;
+
+    /**
+    *  @brief Returns frame number for a given position.
+    *         this function helps to map the position value retuned
+    *         by the animator to a frame number in side the Lottie resource.
+    *         frame_number = lerp(start_frame, endframe, pos);
+    *  @param[in] pos normalized position value [0 ... 1]
+    *  @return frame numer maps to the position value [startFrame .... endFrame]
+    */
+    size_t frameAtPos(double pos);
+
+    /**
+    *  @brief Renders the content to surface synchronously.
+    *         for performance use the async rendering @see render
+    *  @param[in] frameNo Content corresponds to the @p frameNo needs to be drawn
+    *  @param[in] surface Surface in which content will be drawn
+    *  @param[in] keepAspectRatio whether to keep the aspect ratio while scaling the content.
+    */
+    void              renderSync(size_t frameNo, Surface surface, bool keepAspectRatio=true);
+
+    /**
+    *  @brief Returns root layer of the composition updated with
+    *         content of the Lottie resource at frame number @p frameNo.
+    *  @param[in] frameNo Content corresponds to the @p frameNo needs to be extracted.
+    *  @param[in] width   content viewbox width
+    *  @param[in] height  content viewbox height
+    *  @return Root layer node.
+    */
+    const LOTLayerNode * renderTree(size_t frameNo, size_t width, size_t height) const;
+
+    /**
+    *  @brief Returns Composition Markers.
+    *  @return returns MarkerList of the Composition.
+    *  @see MarkerList
+    */
+    const MarkerList& markers() const;
+
+    /**
+    *  @brief Returns Layer information{name, inFrame, outFrame} of all the child layers  of the composition.
+    *  @return List of Layer Information of the Composition.
+    *  @see LayerInfoList
+    */
+    const LayerInfoList& layers() const;
+
+    /**
+    *  @brief Sets property value for the specified {@link KeyPath}. This {@link KeyPath} can resolve
+    *  to multiple contents. In that case, the callback's value will apply to all of them.
+    *  Keypath should conatin object names separated by (.) and can handle globe(**) or wildchar(*).
+    *  @usage
+    *  To change fillcolor property of fill1 object in the layer1->group1->fill1 hirarchy to RED color
+    *     player->setValue<imlottie::Property::FillColor>("layer1.group1.fill1", imlottie::Color(1, 0, 0);
+    *  if all the color property inside group1 needs to be changed to GREEN color
+    *     player->setValue<imlottie::Property::FillColor>("**.group1.**", imlottie::Color(0, 1, 0);
+    */
+    template<Property prop, typename AnyValue>
+    void setValue(const std::string &keypath, AnyValue value)
+    {
+        setValue(MapType<std::integral_constant<Property, prop>>{}, prop, keypath, value);
+    }
+
+    ~Animation();
+    Animation();
+
+private:
+    void setValue(Color_Type, Property, const std::string &, Color);
+    void setValue(Float_Type, Property, const std::string &, float);
+    void setValue(Size_Type, Property, const std::string &, Size);
+    void setValue(Point_Type, Property, const std::string &, Point);
+
+    void setValue(Color_Type, Property, const std::string &, std::function<Color(const FrameInfo &)> &&);
+    void setValue(Float_Type, Property, const std::string &, std::function<float(const FrameInfo &)> &&);
+    void setValue(Size_Type, Property, const std::string &, std::function<Size(const FrameInfo &)> &&);
+    void setValue(Point_Type, Property, const std::string &, std::function<Point(const FrameInfo &)> &&);
+
+    std::unique_ptr<AnimationImpl> d;
+};
+
+//Map Property to Value type
+template<> struct MapType<std::integral_constant<Property, Property::FillColor>>: Color_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeColor>>: Color_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::FillOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::StrokeWidth>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrRotation>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrOpacity>>: Float_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrAnchor>>: Point_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrPosition>>: Point_Type{};
+template<> struct MapType<std::integral_constant<Property, Property::TrScale>>: Size_Type{};
 
 
 } // end namespace imlottie

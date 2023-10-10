@@ -4559,6 +4559,11 @@ void LOTDrawable::sync()
     }
 }
 
+LOTDrawable::~LOTDrawable() {
+    if (mCNode && mCNode->mGradient.stopPtr)
+        free(mCNode->mGradient.stopPtr);
+}
+
 void configureModelCacheSize(size_t cacheSize)
 {
     LottieLoader::configureModelCacheSize(cacheSize);
