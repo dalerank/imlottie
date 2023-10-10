@@ -19,11 +19,19 @@
 #include <cmath>
 #include <cstdint>
 #include <assert.h>
-#ifdef IMLOTTIE_EASTL
-#include "eastl_config.h"
-#else
-#include "stl_config.h"
-#endif
+#include <vector>
+#include <unordered_map>
+#include <future>
+#include <memory>
+#include <algorithm>
+#include <cmath>
+#include <iterator>
+#include <sstream>
+#include <mutex>
+#include <atomic>
+#include <array>
+#include <bitset>
+#include <deque>
 
 #include "imlottie_common.h"
 

@@ -16,8 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "imlottie_renderer.h"
-
 #include "freetype/v_ft_raster.h"
 #include "freetype/v_ft_stroker.h"
 
